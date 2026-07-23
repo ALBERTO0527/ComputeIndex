@@ -97,7 +97,7 @@ export default function Methodology() {
         </p>
         <div data-reveal className="mt-8 flex flex-wrap items-center justify-center gap-4 opacity-0">
           <a
-            href="/EuroCompute_Methodology_v0.9.pdf"
+            href={`${import.meta.env.BASE_URL}EuroCompute_Methodology_v0.9.pdf`}
             download
             className="rounded-full bg-electric px-7 py-3 font-medium text-white transition-all hover:shadow-[0_0_40px_rgba(79,125,255,0.55)]"
           >
@@ -272,7 +272,7 @@ OPEX_hour     =                                      EUR 0.15
           governance procedure in detail.
         </p>
         <a
-          href="/EuroCompute_Methodology_v0.9.pdf"
+          href={`${import.meta.env.BASE_URL}EuroCompute_Methodology_v0.9.pdf`}
           download
           className="mt-8 inline-block rounded-full bg-electric px-8 py-3.5 font-medium text-white transition-all hover:shadow-[0_0_50px_rgba(79,125,255,0.6)]"
         >
