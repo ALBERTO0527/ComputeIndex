@@ -5,6 +5,7 @@ import IndexSection from '../components/IndexSection'
 import ComputeMap from '../components/map/ComputeMap'
 import Streams from '../components/Streams'
 import UseCases from '../components/UseCases'
+import FreeTier from '../components/FreeTier'
 import Cta from '../components/Cta'
 
 export default function Home() {
@@ -19,6 +20,7 @@ export default function Home() {
       <ComputeMap />
       <Streams />
       <UseCases />
+      <FreeTier />
       <Cta />
     </>
   )
