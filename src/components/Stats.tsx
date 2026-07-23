@@ -5,7 +5,7 @@ const STATS = [
   { value: 312, suffix: '', label: 'Data centres tracked' },
   { value: 4.8, suffix: ' GW', label: 'Capacity under observation', decimals: 1 },
   { value: 41, suffix: 'M', label: 'Price points ingested daily' },
-  { value: 14, suffix: '', label: 'European markets covered' },
+  { value: 15, suffix: '', label: 'European markets covered' },
 ]
 
 export default function Stats() {

@@ -2,7 +2,9 @@ import Hero from '../components/Hero'
 import Ticker from '../components/Ticker'
 import Stats from '../components/Stats'
 import IndexSection from '../components/IndexSection'
+import ComputeMap from '../components/map/ComputeMap'
 import Streams from '../components/Streams'
+import UseCases from '../components/UseCases'
 import Cta from '../components/Cta'
 
 export default function Home() {
@@ -14,7 +16,9 @@ export default function Home() {
         <Stats />
       </div>
       <IndexSection />
+      <ComputeMap />
       <Streams />
+      <UseCases />
       <Cta />
     </>
   )

@@ -4,8 +4,9 @@ import { animate, stagger } from 'animejs'
 
 const links = [
   { label: 'Index', to: '/#index' },
-  { label: 'Data', to: '/#data' },
+  { label: 'Map', to: '/#map' },
   { label: 'Products', to: '/#products' },
+  { label: 'Methodology', to: '/methodology' },
   { label: 'Learn', to: '/learn' },
 ]
 

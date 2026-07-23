@@ -6,6 +6,7 @@ const QUOTES = [
   { sym: 'ECM.H200', val: 'EUR 3.87/hr', delta: '+0.8%', up: true },
   { sym: 'ECM.B200', val: 'EUR 5.12/hr', delta: '+1.9%', up: true },
   { sym: 'ECM.MI300X', val: 'EUR 2.61/hr', delta: '-0.4%', up: false },
+  { sym: 'ECM.H100.CH', val: 'EUR 2.26/hr', delta: '+0.6%', up: true },
   { sym: 'ECM.A100', val: 'EUR 1.42/hr', delta: '-0.7%', up: false },
   { sym: 'ECM.L40S', val: 'EUR 0.98/hr', delta: '+2.1%', up: true },
 ]

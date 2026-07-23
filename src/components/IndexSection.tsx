@@ -2,16 +2,27 @@ import { animate, stagger, svg } from 'animejs'
 import { useInView } from '../hooks/useInView'
 
 /*
- * ECM (market leg): volatile, trends up with a spring drawdown and pullbacks.
- * ECC (cost leg): smooth, creeping up with power prices.
- * Lower y = higher price.
+ * Lower y = higher price. Trailing 12 months, July to July.
+ * ECM (market leg): choppy sideways regime, failed rally, spring drawdown,
+ * sharp training-season repricing, consolidation, late leg with a pullback.
+ * ECC (cost leg): power-linked, so jagged, with a winter spike that briefly
+ * squeezes margins negative before easing into summer.
  */
 const ECM_LINE =
-  'M0 228 L40 220 L80 232 L120 208 L160 216 L200 186 L240 196 L280 168 ' +
-  'L320 178 L360 148 L400 176 L440 188 L480 158 L520 166 L560 134 ' +
-  'L600 146 L640 118 L680 126 L720 94 L760 102 L800 72'
+  'M0 222 L20 216 L40 226 L60 212 L80 220 L100 230 L120 218 L140 224 ' +
+  'L160 210 L180 220 L200 214 L220 226 L240 216 L260 196 L280 178 ' +
+  'L300 168 L320 174 L340 188 L360 198 L380 206 L400 196 L420 202 ' +
+  'L440 182 L460 168 L480 150 L500 158 L520 136 L540 128 L560 112 ' +
+  'L580 122 L600 116 L620 128 L640 118 L660 124 L680 106 L700 92 ' +
+  'L720 82 L740 88 L760 98 L780 90 L800 94'
 
-const ECC_LINE = 'M0 196 C100 192 200 194 300 190 S500 186 600 184 S750 180 800 178'
+const ECC_LINE =
+  'M0 200 L20 204 L40 198 L60 202 L80 194 L100 198 L120 190 L140 194 ' +
+  'L160 184 L180 190 L200 180 L220 184 L240 174 L260 178 L280 166 ' +
+  'L300 172 L320 158 L340 164 L360 148 L380 160 L400 144 L420 156 ' +
+  'L440 152 L460 164 L480 158 L500 172 L520 168 L540 180 L560 176 ' +
+  'L580 188 L600 184 L620 194 L640 190 L660 200 L680 196 L700 206 ' +
+  'L720 200 L740 210 L760 204 L780 212 L800 206'
 
 const FACTS = [
   {
@@ -197,13 +208,13 @@ export default function IndexSection() {
             strokeLinejoin="round"
           />
 
-          <circle className="chart-dot" cx="800" cy="72" r="5.5" fill="#22d3ee" opacity="0" style={{ transformOrigin: '800px 72px' }} />
-          <circle className="chart-dot" cx="800" cy="178" r="4.5" fill="#f2c14e" opacity="0" style={{ transformOrigin: '800px 178px' }} />
+          <circle className="chart-dot" cx="800" cy="94" r="5.5" fill="#22d3ee" opacity="0" style={{ transformOrigin: '800px 94px' }} />
+          <circle className="chart-dot" cx="800" cy="206" r="4.5" fill="#f2c14e" opacity="0" style={{ transformOrigin: '800px 206px' }} />
 
           {/* ECS margin bracket at the right edge */}
           <path
             className="ecs-bracket"
-            d="M818 72 h10 v106 h-10"
+            d="M818 94 h10 v112 h-10"
             fill="none"
             stroke="#34d399"
             strokeWidth="1.5"
@@ -211,20 +222,23 @@ export default function IndexSection() {
           <text
             className="chart-label"
             x="836"
-            y="122"
+            y="138"
             fill="#34d399"
             fontSize="11"
             fontFamily="JetBrains Mono, monospace"
             opacity="0"
-            transform="rotate(90 836 122)"
+            transform="rotate(90 836 138)"
           >
             ECS
           </text>
-          <text className="chart-label" x="368" y="215" fill="#8b93b8" fontSize="11" fontFamily="Inter, sans-serif" opacity="0">
-            spring capacity glut
+          <text className="chart-label" x="308" y="132" fill="#f2c14e" fontSize="11" fontFamily="Inter, sans-serif" opacity="0.0">
+            winter power spike
           </text>
-          <text className="chart-label" x="590" y="105" fill="#8b93b8" fontSize="11" fontFamily="Inter, sans-serif" opacity="0">
-            training season
+          <text className="chart-label" x="340" y="232" fill="#8b93b8" fontSize="11" fontFamily="Inter, sans-serif" opacity="0">
+            capacity glut, margins squeezed
+          </text>
+          <text className="chart-label" x="500" y="98" fill="#8b93b8" fontSize="11" fontFamily="Inter, sans-serif" opacity="0">
+            training season repricing
           </text>
         </svg>
       </div>
