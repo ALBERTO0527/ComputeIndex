@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { AI_ICONS } from './aiIcons'
 
 const SITE_URL = 'https://alberto0527.github.io/ComputeIndex/'
 const AI_PROMPT = encodeURIComponent(
@@ -129,8 +130,11 @@ export default function Footer() {
               href={e.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-full border border-line px-4 py-1.5 text-xs text-muted transition-all hover:border-electric/50 hover:text-white"
+              className="flex items-center gap-2 rounded-full border border-line px-4 py-1.5 text-xs text-muted transition-all hover:border-electric/50 hover:text-white"
             >
+              <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 fill-current" aria-hidden>
+                <path fillRule="evenodd" d={AI_ICONS[e.name]} />
+              </svg>
               {e.name}
             </a>
           ))}

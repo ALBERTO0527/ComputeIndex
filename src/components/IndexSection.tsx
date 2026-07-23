@@ -1,28 +1,85 @@
 import { animate, stagger, svg } from 'animejs'
 import { useInView } from '../hooks/useInView'
 
-/*
- * Lower y = higher price. Trailing 12 months, July to July.
- * ECM (market leg): choppy sideways regime, failed rally, spring drawdown,
- * sharp training-season repricing, consolidation, late leg with a pullback.
- * ECC (cost leg): power-linked, so jagged, with a winter spike that briefly
- * squeezes margins negative before easing into summer.
- */
-const ECM_LINE =
-  'M0 222 L20 216 L40 226 L60 212 L80 220 L100 230 L120 218 L140 224 ' +
-  'L160 210 L180 220 L200 214 L220 226 L240 216 L260 196 L280 178 ' +
-  'L300 168 L320 174 L340 188 L360 198 L380 206 L400 196 L420 202 ' +
-  'L440 182 L460 168 L480 150 L500 158 L520 136 L540 128 L560 112 ' +
-  'L580 122 L600 116 L620 128 L640 118 L660 124 L680 106 L700 92 ' +
-  'L720 82 L740 88 L760 98 L780 90 L800 94'
+/* ---------- chart data (deterministic, generated once at module load) ---------- */
 
-const ECC_LINE =
-  'M0 200 L20 204 L40 198 L60 202 L80 194 L100 198 L120 190 L140 194 ' +
-  'L160 184 L180 190 L200 180 L220 184 L240 174 L260 178 L280 166 ' +
-  'L300 172 L320 158 L340 164 L360 148 L380 160 L400 144 L420 156 ' +
-  'L440 152 L460 164 L480 158 L500 172 L520 168 L540 180 L560 176 ' +
-  'L580 188 L600 184 L620 194 L640 190 L660 200 L680 196 L700 206 ' +
-  'L720 200 L740 210 L760 204 L780 212 L800 206'
+function mulberry32(seed: number) {
+  let a = seed
+  return () => {
+    a |= 0
+    a = (a + 0x6d2b79f5) | 0
+    let t = Math.imul(a ^ (a >>> 15), 1 | a)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+const WEEKS = 48
+
+/* price trajectory waypoints [week, EUR/GPU-hr]: sideways, failed rally,
+   winter squeeze, training-season repricing, consolidation, late leg, pullback */
+const ECM_WAY: [number, number][] = [
+  [0, 1.82], [6, 1.80], [13, 1.85], [17, 2.02], [20, 1.93], [24, 1.79],
+  [29, 1.98], [33, 2.15], [38, 2.11], [44, 2.31], [47, 2.21],
+]
+/* cost leg: power-linked, winter peak, summer relief */
+const ECC_WAY: [number, number][] = [
+  [0, 1.86], [8, 1.89], [14, 1.95], [20, 2.04], [24, 2.01], [30, 1.9],
+  [38, 1.83], [43, 1.8], [47, 1.78],
+]
+
+function interp(way: [number, number][], w: number): number {
+  for (let i = 1; i < way.length; i++) {
+    if (w <= way[i][0]) {
+      const [w0, p0] = way[i - 1]
+      const [w1, p1] = way[i]
+      return p0 + ((p1 - p0) * (w - w0)) / (w1 - w0)
+    }
+  }
+  return way[way.length - 1][1]
+}
+
+type Candle = { open: number; close: number; high: number; low: number; vol: number }
+
+const rand = mulberry32(11)
+const CANDLES: Candle[] = []
+{
+  let prev = ECM_WAY[0][1]
+  for (let w = 0; w < WEEKS; w++) {
+    const open = prev
+    const close = interp(ECM_WAY, w + 1) + (rand() - 0.5) * 0.05
+    const high = Math.max(open, close) + rand() * 0.028
+    const low = Math.min(open, close) - rand() * 0.028
+    const vol = (0.25 + rand() * 0.55) * (1 + Math.abs(close - open) * 9)
+    CANDLES.push({ open, close, high, low, vol })
+    prev = close
+  }
+}
+const ECC_PTS: number[] = Array.from(
+  { length: WEEKS },
+  (_, w) => interp(ECC_WAY, w + 0.5) + (rand() - 0.5) * 0.022,
+)
+const LAST = CANDLES[WEEKS - 1].close
+const MAX_VOL = Math.max(...CANDLES.map((c) => c.vol))
+
+/* geometry */
+const STEP = 16
+const BODY_W = 9
+const Y = (p: number) => 16 + (2.4 - p) * 300 // 1.70..2.40 -> 226..16
+const CX = (w: number) => w * STEP + STEP / 2
+const VOL_BASE = 290
+const VOL_MAX_H = 44
+const TICKS = [1.8, 2.0, 2.2, 2.4]
+const MONTHS = ['JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN']
+
+const ECC_PATH = ECC_PTS.map(
+  (p, w) => `${w === 0 ? 'M' : 'L'}${CX(w)} ${Y(p).toFixed(1)}`,
+).join(' ')
+
+const UP = '#34d399'
+const DOWN = '#f87171'
+
+/* ---------- copy ---------- */
 
 const FACTS = [
   {
@@ -97,37 +154,37 @@ export default function IndexSection() {
       duration: 900,
       ease: 'outExpo',
     })
-    animate(svg.createDrawable(root.querySelector('.ecm-line')!), {
-      draw: ['0 0', '0 1'],
-      duration: 2400,
-      delay: 300,
-      ease: 'inOutQuart',
+    animate(root.querySelectorAll('.candle'), {
+      translateY: [6, 0],
+      opacity: [0, 1],
+      delay: stagger(14, { start: 300 }),
+      duration: 500,
+      ease: 'outQuad',
+    })
+    animate(root.querySelectorAll('.vol'), {
+      scaleY: [0, 1],
+      delay: stagger(10, { start: 500 }),
+      duration: 500,
+      ease: 'outQuad',
     })
     animate(svg.createDrawable(root.querySelector('.ecc-line')!), {
       draw: ['0 0', '0 1'],
-      duration: 2400,
-      delay: 700,
+      duration: 2000,
+      delay: 1100,
       ease: 'inOutQuart',
     })
-    animate(root.querySelectorAll('.chart-dot'), {
-      scale: [0, 1],
+    animate(root.querySelector('.price-tag')!, {
       opacity: [0, 1],
+      translateX: [12, 0],
       duration: 600,
-      delay: stagger(150, { start: 2600 }),
-      ease: 'outBack',
-    })
-    animate(svg.createDrawable(root.querySelector('.ecs-bracket')!), {
-      draw: ['0 0', '0 1'],
-      duration: 800,
-      delay: 2900,
-      ease: 'outQuart',
+      delay: 2100,
+      ease: 'outExpo',
     })
     animate(root.querySelectorAll('.chart-label'), {
       opacity: [0, 1],
-      translateX: [-8, 0],
       duration: 700,
-      delay: stagger(180, { start: 3100 }),
-      ease: 'outExpo',
+      delay: stagger(180, { start: 2300 }),
+      ease: 'outQuad',
     })
   })
 
@@ -159,87 +216,169 @@ export default function IndexSection() {
         <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
           <div>
             <p className="font-mono text-xs uppercase tracking-widest text-faint">
-              ECM-H100 vs ECC-H100 / trailing 12 months
+              ECM-H100 weekly / trailing 12 months
             </p>
             <p className="font-mono text-3xl font-600 text-white">
-              EUR 2.21 <span className="text-base text-muted">/ GPU-hr</span>
+              EUR {LAST.toFixed(2)} <span className="text-base text-muted">/ GPU-hr</span>
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-4">
             <span className="flex items-center gap-2 font-mono text-xs text-muted">
-              <span className="h-2 w-2 rounded-full bg-pulse" /> ECM market
+              <svg viewBox="0 0 8 14" className="h-3.5 w-2">
+                <line x1="4" y1="0" x2="4" y2="14" stroke={UP} strokeWidth="1.5" />
+                <rect x="1" y="4" width="6" height="6" fill={UP} />
+              </svg>
+              ECM market
             </span>
             <span className="flex items-center gap-2 font-mono text-xs text-muted">
-              <span className="h-2 w-2 rounded-full bg-gold" /> ECC cost
+              <span className="h-0.5 w-4 bg-gold" /> ECC cost
             </span>
             <span className="rounded-full border border-mint/30 bg-mint/10 px-3 py-1 font-mono text-sm text-mint">
-              ECS +0.33
+              ECS +{(LAST - ECC_PTS[WEEKS - 1]).toFixed(2)}
             </span>
           </div>
         </div>
 
-        <svg viewBox="0 0 860 300" className="w-full" preserveAspectRatio="none">
-          <defs>
-            <linearGradient id="ecmStroke" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#4f7dff" />
-              <stop offset="100%" stopColor="#22d3ee" />
-            </linearGradient>
-          </defs>
-          {[60, 120, 180, 240].map((y) => (
-            <line key={y} x1="0" y1={y} x2="800" y2={y} stroke="#1c2340" strokeWidth="1" />
+        <svg viewBox="0 0 860 316" className="w-full">
+          {/* horizontal grid + right price axis */}
+          {TICKS.map((p) => (
+            <g key={p}>
+              <line x1="0" y1={Y(p)} x2="770" y2={Y(p)} stroke="#1c2340" strokeWidth="1" />
+              <text
+                x="782"
+                y={Y(p) + 3.5}
+                fill="#5a6183"
+                fontSize="10"
+                fontFamily="JetBrains Mono, monospace"
+              >
+                {p.toFixed(2)}
+              </text>
+            </g>
           ))}
 
+          {/* candles */}
+          {CANDLES.map((c, w) => {
+            const up = c.close >= c.open
+            const color = up ? UP : DOWN
+            const bodyTop = Y(Math.max(c.open, c.close))
+            const bodyH = Math.max(1.5, Math.abs(Y(c.open) - Y(c.close)))
+            return (
+              <g key={w} className="candle" opacity="0">
+                <line
+                  x1={CX(w)}
+                  y1={Y(c.high)}
+                  x2={CX(w)}
+                  y2={Y(c.low)}
+                  stroke={color}
+                  strokeWidth="1"
+                />
+                <rect
+                  x={CX(w) - BODY_W / 2}
+                  y={bodyTop}
+                  width={BODY_W}
+                  height={bodyH}
+                  fill={color}
+                />
+              </g>
+            )
+          })}
+
+          {/* cost leg overlay */}
           <path
             className="ecc-line"
-            d={ECC_LINE}
+            d={ECC_PATH}
             fill="none"
             stroke="#f2c14e"
-            strokeWidth="2"
-            strokeLinecap="round"
-            opacity="0.85"
-          />
-          <path
-            className="ecm-line"
-            d={ECM_LINE}
-            fill="none"
-            stroke="url(#ecmStroke)"
-            strokeWidth="2.5"
-            strokeLinecap="round"
+            strokeWidth="1.75"
             strokeLinejoin="round"
           />
 
-          <circle className="chart-dot" cx="800" cy="94" r="5.5" fill="#22d3ee" opacity="0" style={{ transformOrigin: '800px 94px' }} />
-          <circle className="chart-dot" cx="800" cy="206" r="4.5" fill="#f2c14e" opacity="0" style={{ transformOrigin: '800px 206px' }} />
+          {/* last price */}
+          <g className="price-tag" opacity="0">
+            <line
+              x1="0"
+              y1={Y(LAST)}
+              x2="770"
+              y2={Y(LAST)}
+              stroke="#22d3ee"
+              strokeWidth="1"
+              strokeDasharray="3 4"
+              opacity="0.6"
+            />
+            <rect x="774" y={Y(LAST) - 9} width="60" height="18" rx="3" fill="#22d3ee" />
+            <text
+              x="804"
+              y={Y(LAST) + 4}
+              textAnchor="middle"
+              fill="#04050c"
+              fontSize="11"
+              fontFamily="JetBrains Mono, monospace"
+              fontWeight="600"
+            >
+              {LAST.toFixed(4)}
+            </text>
+          </g>
 
-          {/* ECS margin bracket at the right edge */}
-          <path
-            className="ecs-bracket"
-            d="M818 94 h10 v112 h-10"
-            fill="none"
-            stroke="#34d399"
-            strokeWidth="1.5"
-          />
+          {/* annotations */}
           <text
             className="chart-label"
-            x="836"
-            y="138"
-            fill="#34d399"
-            fontSize="11"
+            x={CX(22)}
+            y={Y(1.74) + 14}
+            textAnchor="middle"
+            fill="#5a6183"
+            fontSize="10"
             fontFamily="JetBrains Mono, monospace"
             opacity="0"
-            transform="rotate(90 836 138)"
           >
-            ECS
+            MARGIN SQUEEZE
           </text>
-          <text className="chart-label" x="308" y="132" fill="#f2c14e" fontSize="11" fontFamily="Inter, sans-serif" opacity="0.0">
-            winter power spike
+          <text
+            className="chart-label"
+            x={CX(31)}
+            y={Y(2.2)}
+            textAnchor="middle"
+            fill="#5a6183"
+            fontSize="10"
+            fontFamily="JetBrains Mono, monospace"
+            opacity="0"
+          >
+            TRAINING SEASON
           </text>
-          <text className="chart-label" x="340" y="232" fill="#8b93b8" fontSize="11" fontFamily="Inter, sans-serif" opacity="0">
-            capacity glut, margins squeezed
-          </text>
-          <text className="chart-label" x="500" y="98" fill="#8b93b8" fontSize="11" fontFamily="Inter, sans-serif" opacity="0">
-            training season repricing
-          </text>
+
+          {/* volume */}
+          {CANDLES.map((c, w) => {
+            const h = (c.vol / MAX_VOL) * VOL_MAX_H
+            const up = c.close >= c.open
+            return (
+              <rect
+                key={w}
+                className="vol"
+                x={CX(w) - BODY_W / 2}
+                y={VOL_BASE - h}
+                width={BODY_W}
+                height={h}
+                fill={up ? UP : DOWN}
+                opacity="0.3"
+                style={{ transformOrigin: `${CX(w)}px ${VOL_BASE}px` }}
+              />
+            )
+          })}
+          <line x1="0" y1={VOL_BASE} x2="770" y2={VOL_BASE} stroke="#1c2340" strokeWidth="1" />
+
+          {/* month axis */}
+          {MONTHS.map((m, i) => (
+            <text
+              key={i}
+              x={CX(i * 4 + 2)}
+              y="308"
+              textAnchor="middle"
+              fill="#5a6183"
+              fontSize="9"
+              fontFamily="JetBrains Mono, monospace"
+            >
+              {m}
+            </text>
+          ))}
         </svg>
       </div>
 
